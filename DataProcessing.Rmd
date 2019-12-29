@@ -149,7 +149,7 @@ ticks_data<-ticksdata %>%
 
 ```{r}
 
-ticks_final<-ticks_data %>%   
+ticks_fulldata<-ticks_data %>%   
   mutate(Year=substr(collectDate,0,4),
          Month=substr(collectDate,6,7),
          Day=substr(collectDate,9,10),
@@ -171,7 +171,7 @@ ticks_final<-ticks_data %>%
 
 
 
-mammals_final<-mammals %>% 
+mammals_fulldata<-mammals %>% 
   mutate(Year=substr(collectDate,0,4),
          Month=substr(collectDate,6,7),
          Day=substr(collectDate,9,10)
@@ -194,12 +194,28 @@ mammals_final<-mammals %>%
 ```
 
 
-#### Save both dataframes
+#### Create versions to save that are only presence only data
 
 ```{r}
 
-write.csv(ticks_final, "Data/df/ticks.csv")
-write.csv(mammals_final, "Data/df/mammals.csv")
+ticks_presence<-ticks_fulldata %>% 
+  filter(targetTaxaPresent=="Y")
+
+mammals_presence<-mammals_fulldata %>% 
+  filter(capture==1)
 
 ```
+
+
+#### Save datasets (not to github, too large)
+
+```{r}
+
+save(ticks_fulldata, file="Data/df/ticks_fulldata.Rda")
+save(mammals_fulldata, file="Data/df/mammals_fulldata.Rda")
+save(ticks_presence, file="Data/df/ticks_presence.Rda")
+save(mammals_presence, file="Data/df/mammals_presence.Rda")
+
+```
+
 
