@@ -1,0 +1,205 @@
+---
+title: "Data Processing"
+author: "Sofie McComb"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#NEON data exploration for Macroecosystems Proposal
+
+###Load Packages
+
+```{r packages}
+
+rm(list=ls())
+
+#devtools::install_github("NEONScience/NEON-geolocation/geoNEON")
+library(neonUtilities)
+library(ggplot2)
+library(tidyverse)
+library(geoNEON)
+library(metScanR)
+
+
+```
+
+
+###Download and Stack Data
+
+Only need to download and stack once (make sure data.table is updated)
+
+```{r data}
+
+#All sites:
+# zipsByProduct(dpID="DP1.10093.001", site="all", package="basic", check.size=T) # ticks
+# zipsByProduct(dpID="DP1.10092.001", site="all", package="basic", check.size=T) # tick pathogens
+# zipsByProduct(dpID="DP1.10072.001", site="all", package="basic", check.size=T) # mammals
+
+#Stack data:
+# neonUtilities::stackByTable(filepath="filesToStack10093", folder=T)
+# neonUtilities::stackByTable(filepath="filesToStack10072", folder=T)
+# neonUtilities::stackByTable(filepath="filesToStack10092", folder=T)
+
+```
+
+
+### Read in data (not uploading to github)
+
+```{r}
+
+#Read in csv from stacked data: (need read.csv for logical columns)
+#Tick observations
+ticks_df <- read.csv("filesToStack10093/stackedFiles/tck_fielddata.csv")
+#Ticks taxa
+ticks_taxa_df <- read.csv("filesToStack10093/stackedFiles/tck_taxonomyProcessed.csv")
+#Mammal data
+mammals_df <- read.csv("filesToStack10072/stackedFiles/mam_pertrapnight.csv")
+#Pathogens
+tick_path_df <- read.csv("filesToStack10092/stackedFiles/tck_pathogen.csv")
+
+```
+
+### Data wrangle
+
+####Clean-up each dataframe
+
+```{r}
+
+#Selecting needed columns
+ticks<-ticks_df %>% 
+  mutate(siteID=as.character(siteID),
+         plotID=as.character(plotID),
+         collectDate=as.character(collectDate),
+         lat=decimalLatitude,
+         long=decimalLongitude,
+         nlcd=nlcdClass) %>% 
+  select(siteID,  plotID, collectDate,
+         targetTaxaPresent, adultCount,
+         nymphCount, larvaCount,
+         totalSampledArea, nlcd,
+         lat, long
+         )
+
+ticks_taxa<-ticks_taxa_df %>% 
+  mutate(siteID=substr(plotID, 1, 4),
+         siteID=as.character(siteID),
+         plotID=as.character(plotID),
+         collectDate=as.character(collectDate),
+         sciNameID=acceptedTaxonID,
+         individualCount_taxa=individualCount) %>% 
+  select(siteID, plotID, collectDate,
+         scientificName,sciNameID,
+         sexOrAge, individualCount_taxa
+         )
+
+tick_path<-tick_path_df %>% 
+    mutate(siteID=as.character(siteID),
+         plotID=as.character(plotID),
+         collectDate=as.character(collectDate),
+         lat=decimalLatitude,
+         long=decimalLongitude,
+         nlcd=nlcdClass,
+         individualCount_path=individualCount) %>% 
+  select(siteID, plotID, collectDate,
+         testingID,individualCount_path,
+         testResult,testPathogenName
+         # nlcd, lat, long #otherwise combined twice
+        )
+
+mammals<-mammals_df %>% 
+  # mutate_if(is.factor, as.character) %>%  #If want to switch factors to character columns
+  mutate(siteID=as.character(siteID),
+         plotID=as.character(plotID),
+         collectDate=as.character(collectDate),
+         lat=decimalLatitude,
+         long=decimalLongitude,
+         nlcd=nlcdClass,
+         trapstatuscode=substr(trapStatus,0,1),
+         capture=ifelse(trapstatuscode == '5', 1,
+                    ifelse(trapstatuscode == '4', 1, 0))) %>%
+  select(siteID, plotID, collectDate,
+         trapstatuscode,trapStatus, capture,
+         tagID, taxonID,
+         scientificName, recapture,
+         larvalTicksAttached, nymphalTicksAttached,
+         adultTicksAttached,
+         nlcd, lat, long
+         )
+         
+         
+
+```
+
+#### Combine tick dataframes
+
+```{r}
+
+ticksdata<-full_join(ticks, ticks_taxa,
+                      by=c("siteID", "plotID", "collectDate"))
+ticks_data<-ticksdata %>% 
+  full_join(tick_path, by=c("siteID", "plotID", "collectDate"))
+
+```
+
+
+#### Add Month and Year information to both datasets (ticks_data, mammals)
+
+```{r}
+
+ticks_final<-ticks_data %>%   
+  mutate(Year=substr(collectDate,0,4),
+         Month=substr(collectDate,6,7),
+         Day=substr(collectDate,9,10),
+         Time=substr(collectDate,12,16)
+         )%>% 
+  mutate(MonthName=ifelse(Month=="01", "Jan",
+                    ifelse(Month=="02", "Feb",
+                     ifelse(Month=="03", "Mar",
+                      ifelse(Month=="04", "Apr",
+                        ifelse(Month=="05", "May",
+                          ifelse(Month=="06", "Jun",
+                            ifelse(Month=="07", "Jul",
+                              ifelse(Month=="08", "Aug",
+                               ifelse(Month=="09", "Sep",
+                                ifelse(Month=="10", "Oct",
+                                 ifelse(Month=="11", "Nov",
+                                  ifelse(Month=="12", "Dec", NA))))))))))))) %>% 
+  mutate(MonthYear=paste0(MonthName, "-", Year))
+
+
+
+mammals_final<-mammals %>% 
+  mutate(Year=substr(collectDate,0,4),
+         Month=substr(collectDate,6,7),
+         Day=substr(collectDate,9,10)
+         ) %>% 
+  mutate(MonthName=ifelse(Month=="01", "Jan",
+                    ifelse(Month=="02", "Feb",
+                     ifelse(Month=="03", "Mar",
+                      ifelse(Month=="04", "Apr",
+                        ifelse(Month=="05", "May",
+                          ifelse(Month=="06", "Jun",
+                            ifelse(Month=="07", "Jul",
+                              ifelse(Month=="08", "Aug",
+                               ifelse(Month=="09", "Sep",
+                                ifelse(Month=="10", "Oct",
+                                 ifelse(Month=="11", "Nov",
+                                  ifelse(Month=="12", "Dec", NA))))))))))))) %>% 
+  mutate(MonthYear=paste0(MonthName, "-", Year))
+
+
+```
+
+
+#### Save both dataframes
+
+```{r}
+
+write.csv(ticks_final, "Data/df/ticks.csv")
+write.csv(mammals_final, "Data/df/mammals.csv")
+
+```
+
