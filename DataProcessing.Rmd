@@ -207,7 +207,7 @@ mammals_presence<-mammals_fulldata %>%
 ```
 
 
-#### Save datasets (not to github, too large)
+#### Save datasets (as Rda so can fit on github)
 
 ```{r}
 
@@ -215,6 +215,12 @@ save(ticks_fulldata, file="Data/df/ticks_fulldata.Rda")
 save(mammals_fulldata, file="Data/df/mammals_fulldata.Rda")
 save(ticks_presence, file="Data/df/ticks_presence.Rda")
 save(mammals_presence, file="Data/df/mammals_presence.Rda")
+
+# #Save csv on personal drive, too large for github
+# write.csv(ticks_fulldata, "C:/Users/shemc/Documents/UCSB/NEON/df/ticks_fulldata.csv")
+# write.csv(mammals_fulldata, "C:/Users/shemc/Documents/UCSB/NEON/df/mammals_fulldata.csv")
+# write.csv(ticks_presence, "C:/Users/shemc/Documents/UCSB/NEON/df/ticks_presence.csv")
+# write.csv(mammals_presence, "C:/Users/shemc/Documents/UCSB/NEON/df/mammals_presence.csv")
 
 ```
 
