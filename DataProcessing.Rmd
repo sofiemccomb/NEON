@@ -88,11 +88,13 @@ ticks_taxa<-ticks_taxa_df %>%
          siteID=as.character(siteID),
          plotID=as.character(plotID),
          collectDate=as.character(collectDate),
+         subsampleID=as.character(subsampleID),
          sciNameID=acceptedTaxonID,
          individualCount_taxa=individualCount) %>% 
   select(siteID, plotID, collectDate,
          scientificName,sciNameID,
-         sexOrAge, individualCount_taxa
+         sexOrAge, individualCount_taxa,
+         subsampleID
          )
 
 tick_path<-tick_path_df %>% 
@@ -106,11 +108,9 @@ tick_path<-tick_path_df %>%
   select(siteID, plotID, collectDate,
          testingID,individualCount_path,
          testResult,testPathogenName
-         # nlcd, lat, long #otherwise combined twice
         )
 
 mammals<-mammals_df %>% 
-  # mutate_if(is.factor, as.character) %>%  #If want to switch factors to character columns
   mutate(siteID=as.character(siteID),
          plotID=as.character(plotID),
          collectDate=as.character(collectDate),
@@ -141,6 +141,7 @@ ticksdata<-full_join(ticks, ticks_taxa,
                       by=c("siteID", "plotID", "collectDate"))
 ticks_data<-ticksdata %>% 
   full_join(tick_path, by=c("siteID", "plotID", "collectDate"))
+
 
 ```
 
@@ -194,33 +195,16 @@ mammals_fulldata<-mammals %>%
 ```
 
 
-#### Create versions to save that are only presence only data
-
-```{r}
-
-ticks_presence<-ticks_fulldata %>% 
-  filter(targetTaxaPresent=="Y")
-
-mammals_presence<-mammals_fulldata %>% 
-  filter(capture==1)
-
-```
-
-
 #### Save datasets (as Rda so can fit on github)
 
 ```{r}
 
 save(ticks_fulldata, file="Data/df/ticks_fulldata.Rda")
 save(mammals_fulldata, file="Data/df/mammals_fulldata.Rda")
-save(ticks_presence, file="Data/df/ticks_presence.Rda")
-save(mammals_presence, file="Data/df/mammals_presence.Rda")
 
-# #Save csv on personal drive, too large for github
-# write.csv(ticks_fulldata, "C:/Users/shemc/Documents/UCSB/NEON/df/ticks_fulldata.csv")
-# write.csv(mammals_fulldata, "C:/Users/shemc/Documents/UCSB/NEON/df/mammals_fulldata.csv")
-# write.csv(ticks_presence, "C:/Users/shemc/Documents/UCSB/NEON/df/ticks_presence.csv")
-# write.csv(mammals_presence, "C:/Users/shemc/Documents/UCSB/NEON/df/mammals_presence.csv")
+#Save csv on personal drive, too large for github
+write.csv(ticks_fulldata, "C:/Users/shemc/Documents/UCSB/NEON/df/ticks_fulldata.csv")
+write.csv(mammals_fulldata, "C:/Users/shemc/Documents/UCSB/NEON/df/mammals_fulldata.csv")
 
 ```
 
