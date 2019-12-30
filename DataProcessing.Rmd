@@ -22,6 +22,7 @@ library(ggplot2)
 library(tidyverse)
 library(geoNEON)
 library(metScanR)
+library(lubridate)
 
 
 ```
@@ -192,7 +193,14 @@ mammals_fulldata<-mammals %>%
   mutate(MonthYear=paste0(MonthName, "-", Year))
 
 
+#Add date column to both datasets, based off month, day, year
+ticks_fulldata$date <- paste(ticks_fulldata$Year, ticks_fulldata$Month, ticks_fulldata$Day, sep="-") %>% 
+  paste(ticks_fulldata$Time) %>% lubridate::ymd_hm()
+
+mammals_fulldata$date <- paste(mammals_fulldata$Year, mammals_fulldata$Month, mammals_fulldata$Day, sep="-") %>% lubridate::ymd()
+
 ```
+
 
 
 #### Save datasets (as Rda so can fit on github)
