@@ -1,0 +1,300 @@
+---
+title: "Analysis"
+author: "Sofie McComb"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load Packages
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+```
+
+
+### Load Data
+
+```{r}
+
+load("Data/df/ticks_fulldata.Rda")
+load("Data/df/mammals_fulldata.Rda")
+
+```
+
+
+### Nymph (Ixodes scap) and larvae (all species) time series for SERC and HARV site for 2018
+
+Aggregate data by plot and collection date (or Month-Year) to calculate density of ticks by species/life stage. 
+
+Need to use individual taxa counts over nymph counts, otherwise ignoring taxa relevant information (not only counting ixodes scapularis when subset). But need to use larvaCount over individual taxa counts, since need all taxa for larva and not all identified (would be missing a lot).
+
+####Aggregate
+
+```{r}
+
+
+#Nymph (Ixodes scapularis) Have to use individualCount to use 
+nymph_2018_ixosca<-ticks_fulldata %>% 
+  filter(sexOrAge == 'Nymph',
+         scientificName == 'Ixodes scapularis',
+         Year=="2018") %>% 
+  rename(NymphCount=individualCount_taxa)
+nymph_count_2018_ixosca<-aggregate(NymphCount ~ siteID + plotID + Year +MonthYear + date, data=nymph_2018_ixosca, FUN=sum)
+
+#Larva (All species)
+larva_2018<-ticks_fulldata %>% 
+  filter(Year=="2018") %>% 
+    rename(LarvaCount=larvaCount) %>% 
+  select(siteID, plotID, Year, MonthYear, date, LarvaCount) %>%  #only necessary columns before remove duplicates so count is accurate
+  distinct()#remove duplicate rows (made for taxa ID/pathogens) so each observation only count once
+larva_count_2018<-aggregate(LarvaCount ~ siteID + plotID + Year +MonthYear + date, data=larva_2018, FUN=sum) #Aggregate just remove 2 rows with NA value
+
+
+#Combine dataframes with fulljoin
+count_2018<-full_join(nymph_count_2018_ixosca, larva_count_2018, by=c("siteID", "plotID", "Year", "MonthYear", "date")) 
+
+
+
+```
+
+#### Visualize: SERC
+```{r}
+
+#All SERC plots together
+SERC_count_2018_allplots<-count_2018 %>% 
+  filter(siteID=="SERC") %>% 
+  mutate(Date=substr(date, 0,10) %>% lubridate::ymd()) %>% 
+    group_by(siteID, Year, MonthYear, Date) %>% 
+  summarise(Nymph=sum(NymphCount, na.rm = TRUE),
+            Larva=sum(LarvaCount, na.rm = TRUE)) %>% 
+  gather(Stage, Count, Nymph:Larva) %>% 
+  mutate(Stage=as.factor(Stage))
+SERC_count_2018_allplots$Stage<-relevel(SERC_count_2018_allplots$Stage, "Nymph")#Relevel so nymph first in legend
+
+SERC_allplots<-ggplot(SERC_count_2018_allplots, aes(x = Date, y=Count, group=Stage, color=Stage)) + 
+  geom_line(size=1)+
+  theme_minimal()+
+  scale_color_manual(values=c("#00AFBB", "#E7B800"))
+
+SERC_allplots
+
+
+```
+
+```{r}
+
+#SERC plots as facet
+SERC_count_2018<-count_2018 %>% 
+  filter(siteID=="SERC") %>% 
+  mutate(Date=substr(date, 0,10) %>% lubridate::ymd()) %>% 
+  group_by(siteID, plotID, Year, MonthYear, Date) %>% 
+  summarise(Nymph=sum(NymphCount, na.rm = TRUE),
+            Larva=sum(LarvaCount, na.rm = TRUE)) %>% 
+  gather(Stage, Count, Nymph:Larva) %>% 
+  mutate(Stage=as.factor(Stage))
+SERC_count_2018$Stage<-relevel(SERC_count_2018$Stage, "Nymph")#Relevel so nymph first in legend
+
+
+SERC_facetplots<-ggplot(SERC_count_2018, aes(x = Date, y=Count, group=Stage, color=Stage)) + 
+  geom_line(size=1)+
+  theme_minimal()+
+  scale_color_manual(values=c("#00AFBB", "#E7B800"))+
+  facet_wrap(~plotID)
+
+
+SERC_facetplots
+
+
+```
+
+#### Visualize: HARV
+
+```{r}
+
+#All HARV plots together
+HARV_count_2018_allplots<-count_2018 %>% 
+  filter(siteID=="HARV") %>% 
+  mutate(Date=substr(date, 0,10) %>% lubridate::ymd()) %>% 
+    group_by(siteID, Year, MonthYear, Date) %>% 
+  summarise(Nymph=sum(NymphCount, na.rm = TRUE),
+            Larva=sum(LarvaCount, na.rm = TRUE)) %>% 
+  gather(Stage, Count, Nymph:Larva) %>% 
+  mutate(Stage=as.factor(Stage))
+HARV_count_2018_allplots$Stage<-relevel(HARV_count_2018_allplots$Stage, "Nymph")#Relevel so nymph first in legend
+
+HARV_allplots<-ggplot(HARV_count_2018_allplots, aes(x = Date, y=Count, group=Stage, color=Stage)) + 
+  geom_line(size=1)+
+  theme_minimal()+
+  scale_color_manual(values=c("#00AFBB", "#E7B800"))
+
+HARV_allplots
+
+
+```
+
+```{r}
+
+#HARV plots as facet
+HARV_count_2018<-count_2018 %>% 
+  filter(siteID=="HARV") %>% 
+  mutate(Date=substr(date, 0,10) %>% lubridate::ymd()) %>% 
+  group_by(siteID, plotID, Year, MonthYear, Date) %>% 
+  summarise(Nymph=sum(NymphCount, na.rm = TRUE),
+            Larva=sum(LarvaCount, na.rm = TRUE)) %>% 
+  gather(Stage, Count, Nymph:Larva) %>% 
+  mutate(Stage=as.factor(Stage))
+HARV_count_2018$Stage<-relevel(HARV_count_2018$Stage, "Nymph")#Relevel so nymph first in legend
+
+
+HARV_facetplots<-ggplot(HARV_count_2018, aes(x = Date, y=Count, group=Stage, color=Stage)) + 
+  geom_line(size=1)+
+  theme_minimal()+
+  scale_color_manual(values=c("#00AFBB", "#E7B800"))+
+  facet_wrap(~plotID)
+
+
+HARV_facetplots
+
+
+```
+
+
+
+
+
+
+###Infection prevalence
+
+Aggregate data by plot and collection date (or Month-Year) to calculate infection prevalence with different pathogens by tick species/plot/date.
+
+[Pause until determine what infections, tick species, and life stages to aggregate around]
+
+
+
+### Plot proportion of mammals trapped that had feeding ticks for each lifestage found at the SERC site across all years
+
+#### Plot with # animals per trap in each plot/date
+
+(e.g. 5 captures per 200 traps set in plot X on date Y = 0.025)
+
+```{r}
+
+mammals_df<-mammals_fulldata %>% 
+  select(-nlcd, -lat, -long, -Month, -Day, -MonthName) %>% 
+  mutate(Trap=ifelse(trapstatuscode == '2', 1,
+                    ifelse(trapstatuscode == '3', 1,
+                        ifelse(trapstatuscode== "4", 1,
+                              ifelse(trapstatuscode=="5", 1,
+                                     ifelse(trapstatuscode=="6",1,0)))))) #1 should be 0, as well as any others
+
+
+#Aggregate to get # traps set in each plot-date combination
+traps_set<-aggregate(Trap ~ siteID + plotID + Year +MonthYear + date, data=mammals_df, FUN=sum)
+
+#Aggregate to get # captures in each plot-date combination
+captures<-aggregate(capture~ siteID + plotID + Year +MonthYear + date, data=mammals_df, FUN=sum)
+
+cap_trap<-full_join(captures, traps_set, by=c("siteID", "plotID", "Year", "MonthYear", "date")) %>% 
+  mutate(cap_trap=capture/Trap) %>% 
+  filter(!is.na(cap_trap))#Remove NA (where trap is 0)
+
+serc_cap_trap<-cap_trap %>% filter(siteID=="SERC")
+
+ggplot(serc_cap_trap, aes(x=date, y=cap_trap))+
+  geom_line(size=1, color="#00AFBB")+
+  facet_wrap(~plotID)+
+  theme_minimal()+
+  labs(x="Date", y="Trapping effort (# of Animals Captured/Traps Set)")
+
+
+```
+
+
+#### Plot # of animals with feeding ticks per total number of animals trapped in each plot/date 
+(e.g. 2 animals with feeding ticks of 5 total animals captured)
+
+```{r}
+
+#Use mammals_df from above as base
+
+mammals_ticks<-mammals_df %>% 
+  mutate(larvae_Y=ifelse(larvalTicksAttached == 'Y', 1, 0),
+         nymphs_Y=ifelse(nymphalTicksAttached == 'Y', 1, 0),
+         adults_Y=ifelse(adultTicksAttached == 'Y', 1, 0))
+
+
+
+#Aggregate number of animals with each type of feeding tick
+larval_ticks<-aggregate(larvae_Y~siteID + plotID + Year +MonthYear + date, data=mammals_ticks, FUN=sum)
+nymph_ticks<-aggregate(nymphs_Y~siteID + plotID + Year +MonthYear + date, data=mammals_ticks, FUN=sum)
+adult_ticks<-aggregate(adults_Y~siteID + plotID + Year +MonthYear + date, data=mammals_ticks, FUN=sum)
+
+#Join results together with cap_trap from previous section
+
+mams_ticks<-cap_trap %>% 
+  full_join(larval_ticks, by=c("siteID", "plotID", "Year", "MonthYear", "date")) %>% 
+  full_join(nymph_ticks, by=c("siteID", "plotID", "Year", "MonthYear", "date")) %>% 
+  full_join(adult_ticks, by=c("siteID", "plotID", "Year", "MonthYear", "date")) %>% 
+  filter(!is.na(cap_trap)) %>% #where trap is 0
+  mutate(larvae_cap=ifelse(capture==0, 0, larvae_Y/capture), #Calculate #animals with feeding ticks/#captured
+         nymph_cap=ifelse(capture==0, 0, nymphs_Y/capture),
+         adult_cap=ifelse(capture==0, 0, adults_Y/capture))
+
+
+#Plot for SERC
+serc_mams_ticks<-mams_ticks %>% filter(siteID=="SERC") %>% 
+  rename(Larvae=larvae_cap, Nymph=nymph_cap, Adult=adult_cap) %>% 
+  gather(stage, proportion, Larvae:Adult) %>% 
+  mutate(Stage=as.factor(stage))
+serc_mams_ticks$Stage<-relevel(serc_mams_ticks$Stage, "Nymph")#Relevel so nymph first in legend
+serc_mams_ticks$Stage<-relevel(serc_mams_ticks$Stage, "Larvae")#Relevel so Larvae first in legend
+
+ggplot(serc_mams_ticks, aes(x=date, y=proportion, group=Stage, color=Stage))+
+  geom_line(size=1)+
+  facet_wrap(~plotID)+
+  theme_minimal()+
+  labs(x="Date", y="Proportion Captured Animals with Feeding Ticks")+
+  scale_color_manual(values=c("#E7B800","#00AFBB", "#90ee90"))
+
+
+```
+
+
+
+#### Plot density of animals with feeding ticks in each plot/date
+(e.g. 2 animals with feeding ticks per 200 traps set in plot X on date Y).
+
+
+```{r}
+
+#Based off of mams_ticks from above
+
+mams_traps<-mams_ticks %>% 
+  mutate(larvae_traps=larvae_Y/Trap,
+         nymph_traps=nymphs_Y/Trap,
+         adult_traps=adults_Y/Trap)
+
+#Plot for SERC
+serc_mams_traps<-mams_traps %>% filter(siteID=="SERC") %>% 
+  rename(Larvae=larvae_traps, Nymph=nymph_traps, Adult=adult_traps) %>% 
+  gather(stage, proportion, Larvae:Adult) %>% 
+  mutate(Stage=as.factor(stage))
+serc_mams_traps$Stage<-relevel(serc_mams_traps$Stage, "Nymph")#Relevel so nymph first in legend
+serc_mams_traps$Stage<-relevel(serc_mams_traps$Stage, "Larvae")#Relevel so Larvae first in legend
+
+ggplot(serc_mams_traps, aes(x=date, y=proportion, group=Stage, color=Stage))+
+  geom_line(size=1)+
+  facet_wrap(~plotID)+
+  theme_minimal()+
+  labs(x="Date", y="Proportion Traps Set having Animals with Feeding Ticks")+
+  scale_color_manual(values=c("#E7B800","#00AFBB", "#90ee90"))
+
+
+```
+
+
+
